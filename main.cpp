@@ -1,11 +1,9 @@
-#include "Simulator.h"
+﻿#include "instruction.h"
+#include<iostream>
 
 int main() {
-    Simulator sim;
-    sim.loadProgram("instructions.txt");
-    sim.loadData("data.txt");
-    sim.run();
-    sim.printResults();
+    TomasuloSimulator simulator(".\instructions.txt");
+    simulator.simulate();
+    simulator.printResults();
     return 0;
 }
-
