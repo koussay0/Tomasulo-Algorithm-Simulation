@@ -5,3 +5,6 @@
 16 May:
 - Files creating 
 - Instruction decode
+17 May:
+- Reading instructions correctly
+- output time schedule for the instructions
