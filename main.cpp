@@ -1,9 +1,12 @@
-﻿#include "instruction.h"
+#include "instruction.h"
 #include<iostream>
 
 int main() {
-    TomasuloSimulator simulator(".\instructions.txt");
+    std::string fullPath = "C:/Users/kouss/CLionProjects/untitled/instructions.txt";
+    TomasuloSimulator simulator(fullPath);
+
     simulator.simulate();
     simulator.printResults();
+
     return 0;
 }
