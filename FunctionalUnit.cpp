@@ -8,14 +8,16 @@ using namespace std;
 
 //We're missing an access to the memory
 
-FunctionalUnit::FunctionalUnit(std::string opcode, int PC, int Label, int16_t i1, int16_t i2, int16_t offset, int16_t result) {
-    opcode = opcode;
-    PC = PC;
-    Label = Label;
-    i1 = i1;
-    i2 = i2;
-    offset = offset;
-    result = result;
+FunctionalUnit::FunctionalUnit(std::string Opcode, int Cycles, int pc, int label, int16_t I1, int16_t I2, int16_t Offset) {
+    opcode = Opcode;
+    remCycles = Cycles;
+    PC = pc;
+    Label = label;
+    i1 = I1;
+    i2 = I2;
+    offset = Offset;
+    result = 0;
+    //result = Result;
 }
 
 int16_t FunctionalUnit::Operation() {
@@ -58,6 +60,19 @@ int16_t FunctionalUnit::Operation() {
         result = 0;
     }
     return result;
+}
+
+int FunctionalUnit ::getRemCycles() {
+    return remCycles;
+}
+
+void FunctionalUnit ::clear() {
+    opcode = "";
+    i1 = 0;
+    i2 = 0;
+    offset = 0;
+    result = 0;
+    remCycles = 0;
 }
 
 

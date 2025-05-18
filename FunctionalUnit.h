@@ -12,10 +12,13 @@ public:
     string opcode;
     int PC;
     int Label;
+    int remCycles;
     int16_t i1, i2, offset, result;
 
-    FunctionalUnit(string opcode, int PC, int Label, int16_t i1, int16_t i2, int16_t offset, int16_t result);
+    FunctionalUnit(string Opcode, int Cycles, int pc, int label, int16_t I1, int16_t I2, int16_t Offset);
     int16_t Operation();
+    int getRemCycles();
+    void clear();
 };
 
 
