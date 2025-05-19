@@ -1,0 +1,7 @@
+LOAD R1, 0(R0)
+LOAD R2, 1(R0)
+CALL Func
+ADD R3, R2, R1
+Func 
+SUB R3, R2, R1
+RET
