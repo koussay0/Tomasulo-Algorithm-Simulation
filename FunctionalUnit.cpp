@@ -3,10 +3,11 @@
 #include <cstdint>
 using namespace std;
 #include "FunctionalUnit.h"
+#include "Memory.h" // Assuming there's a Memory class
 
 
 
-//We're missing an access to the memory
+//Koussay's memory does not have a constructor!!
 
 FunctionalUnit::FunctionalUnit(std::string Opcode, int Cycles, int pc, int label, int16_t I1, int16_t I2, int16_t Offset) {
     opcode = Opcode;
@@ -17,6 +18,7 @@ FunctionalUnit::FunctionalUnit(std::string Opcode, int Cycles, int pc, int label
     i2 = I2;
     offset = Offset;
     result = 0;
+    memory = nullptr;
     //result = Result;
 }
 
@@ -42,11 +44,26 @@ int16_t FunctionalUnit::Operation() {
         result = PC;
     }
     else if (opcode == "LOAD") {
-        result = offset + i2;
+        // result = offset + i2; old version
+        int16_t effectiveAddr = offset + i2;
+        // Access memory if available
+        if (memory != nullptr) {
+            result = memory->read(effectiveAddr);
+        } else {
+            result = effectiveAddr; // Just return address if no memory access
+        }
     }
     else if (opcode == "STORE") {
-        result = offset + i2;
+        // result = offset + i2; old version
+        int16_t effectiveAddr = offset + i2;
+        if (memory != nullptr) {
+            memory->write(effectiveAddr, i1);
+        }
+        result = effectiveAddr;
     }
+
+
+
     else if (opcode == "BEQ") {
         if (i1 == i2) {
             PC = PC+1+offset;

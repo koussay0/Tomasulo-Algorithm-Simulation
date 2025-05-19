@@ -13,12 +13,13 @@ public:
     int16_t value;
     int destinationReg;
     bool busy;
-    string sourceTag;
 
     CommonDataBus();
-    void broadcast(int16_t value, int destinationReg, const string& sourceTag);
+    void broadcast(int16_t value, int destinationReg);
     void clear();
     bool isBusy();
+    int16_t getValue();
+    int getDestinationReg();
 };
 
 

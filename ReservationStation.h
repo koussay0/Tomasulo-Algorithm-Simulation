@@ -6,27 +6,35 @@
 #define C_RESERVATIONSTATION_H
 #include <cstdint>
 #include <string>
+#include "FunctionalUnit.h"
 using namespace std;
 
 class ReservationStation{
 public:
     string Name;
     bool Busy;
+    bool Issue_status;
+    bool Execute_status;
+    bool Write_status;
     string Op;
     int16_t Vj;
     int16_t Vk;
     string Qj;
     string Qk;
     int16_t A;
+    FunctionalUnit* functionalUnit;
 
     ReservationStation(const string& name);
     bool isBusy();
     bool isEmpty();
     bool isReady();
-    void issue(const string& op, int16_t vj, const string& qj, int16_t vk, const string& qk, int16_t address);
-    void execute();
-    void write();
+    bool isIssued();
+    bool isExecuted();
+    bool isWriting();
+    void setNextStatus();
+    void displayStatus();
     void clear();
+    void setFunctionalUnit(FunctionalUnit* fu);
 
 };
 

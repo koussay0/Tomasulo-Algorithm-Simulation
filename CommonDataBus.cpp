@@ -8,24 +8,30 @@ CommonDataBus ::CommonDataBus() {
     value = 0;
     destinationReg = -1;
     busy = false;
-    sourceTag = "";
 }
 
-void CommonDataBus :: broadcast(int16_t value, int destinationReg, const std::string& sourceTag){
+void CommonDataBus :: broadcast(int16_t value, int destinationReg){
     this->value = value;
     this->destinationReg = destinationReg;
-    this->sourceTag = sourceTag;
     this->busy = true;
 }
 
 void CommonDataBus ::clear() {
     this->value = 0;
     this->destinationReg = -1;
-    this->sourceTag = "";
     this->busy = false;
 }
 
 
 bool CommonDataBus ::isBusy() {
-    return this->busy;
+    return busy;
 }
+
+int16_t CommonDataBus::getValue() {
+    return value;
+}
+
+int CommonDataBus::getDestinationReg()  {
+    return destinationReg;
+}
+

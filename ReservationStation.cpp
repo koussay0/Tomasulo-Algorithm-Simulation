@@ -7,6 +7,9 @@ using namespace std;
 ReservationStation ::ReservationStation(const std::string &name) {
     Name = name;
     Busy = false;
+    Issue_status = false;
+    Execute_status = false;
+    Write_status = false;
     Op = "";
     Vj = 0;
     Vk = 0;
@@ -29,30 +32,60 @@ bool ReservationStation ::isReady() {
     return Qj.empty() && Qk.empty();
 }
 
-void ReservationStation ::issue(const string& op, int16_t vj, const string& qj, int16_t vk, const string& qk, int16_t address) {
-    Busy = true;
-    Op = op;
-    Vj = vj;
-    Qj = qj;
-    Vk = vk;
-    Qk = qk;
-    A = address;
+bool ReservationStation ::isIssued() {
+    return Issue_status;
 }
 
-void ReservationStation::execute() {
-
+bool ReservationStation::isExecuted() {
+    return Execute_status;
 }
 
-void ReservationStation::write() {
+bool ReservationStation::isWriting() {
+    return  Write_status;
+}
 
+void ReservationStation::setNextStatus() {
+    if (!Issue_status) {
+        Issue_status = true;
+    }
+    else if (Issue_status && !Execute_status) {
+        Execute_status = true;
+    }
+    else if (Execute_status && !Write_status) {
+        Write_status = true;
+    }
+}
+
+void ReservationStation ::displayStatus() {
+    if(Issue_status)
+        cout << "Issuing:" << endl;
+    else if (Execute_status)
+        cout << "Executing: " << endl;
+    else if (Write_status)
+        cout << "Writing: " << endl;
+    else
+        cout << "Invalid" << endl;
 }
 
 void ReservationStation ::clear() {
     Busy = false;
+    Issue_status = false;
+    Execute_status = false;
+    Write_status = false;
     Op = "";
     Vj = 0;
     Vk = 0;
     Qj = "";
     Qk = "";
     A = 0;
+    functionalUnit = nullptr;
 }
+
+void ReservationStation::setFunctionalUnit(FunctionalUnit* fu) {
+    functionalUnit = fu;
+}
+
+
+
+
+
