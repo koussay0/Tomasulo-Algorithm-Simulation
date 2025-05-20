@@ -4,7 +4,7 @@
 #include "FunctionalUnit.h"
 #include "Memory.h" // Make sure this matches your filename
 
-FunctionalUnit::FunctionalUnit(std::string Opcode, int Cycles, int pc, int label, int16_t I1, int16_t I2, int16_t Offset) {
+FunctionalUnit::FunctionalUnit(std::string Opcode, int Cycles, int pc, int label, int16_t I1, int16_t I2, int16_t Offset, bool Busy) {
     opcode = Opcode;
     remCycles = Cycles;
     PC = pc;
@@ -14,6 +14,7 @@ FunctionalUnit::FunctionalUnit(std::string Opcode, int Cycles, int pc, int label
     offset = Offset;
     result = 0;
     memory = nullptr; // pointer to memory must be set externally
+    busy = Busy;
 }
 
 int16_t FunctionalUnit::Operation() {
@@ -80,4 +81,12 @@ void FunctionalUnit::clear() {
     offset = 0;
     result = 0;
     remCycles = 0;
+}
+
+bool FunctionalUnit::isBusy() const {
+    return busy;
+}
+
+void FunctionalUnit::setBusy(bool status) {
+    busy = status;
 }

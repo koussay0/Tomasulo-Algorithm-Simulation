@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 #include "ReservationStation.h"
+#include "CommonDataBus.h"
+#include "FunctionalUnit.h"
 
 struct InstructionTiming {
     int issue = -1;
@@ -29,10 +31,13 @@ public:
     vector<int16_t> registerFile = vector<int16_t>(8, 0);
     vector<ReservationStation*> registerStatus;
     vector<ReservationStation> reservationStations;
+    vector <FunctionalUnit> fuList;
+    CommonDataBus commonDataBus;
     TomasuloSimulator(const std::string& filename);
     void simulate();
     void printResults() const;
-    void issue();
+    void Issue();
+    void Execute();
 
 
     std::vector<Instruction> instructions;
