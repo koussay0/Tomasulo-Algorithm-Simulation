@@ -8,3 +8,9 @@
 17 May:
 - Reading instructions correctly
 - output time schedule for the instructions
+19 May:
+- Worked on instruction.h and instruction.cpp
+20 May:
+- completed the memory.h and memory.cpp module 
+- corrected error in FunctionalUnit.cpp module 
+- Tried t4o integrate the componenets of the project together.
