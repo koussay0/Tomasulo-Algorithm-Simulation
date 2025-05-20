@@ -1,10 +1,32 @@
 #include "RegisterRenaming.h"
+#include <sstream>
 
-RegisterRenaming::RegisterRenaming() : nextPhysical(0) {}
+RegisterRenaming::RegisterRenaming() {
+    nextPhysical = 0;
+    renameTable.clear();
+}
 
-std::string RegisterRenaming::rename(const std::string& reg) {
-    if (renameTable.find(reg) == renameTable.end()) {
-        renameTable[reg] = "P" + std::to_string(nextPhysical++);
+// Returns the physical register assigned to the logical register
+string RegisterRenaming::rename(const string& logicalReg) {
+    // Check if already renamed
+    if (renameTable.find(logicalReg) != renameTable.end()) {
+        return renameTable[logicalReg];
     }
-    return renameTable[reg];
+
+    // Generate new physical register name
+    stringstream ss;
+    ss << "P" << nextPhysical++; // Physical register naming: P0, P1, P2, ...
+
+    string physicalReg = ss.str();
+    renameTable[logicalReg] = physicalReg;
+    return physicalReg;
+}
+
+unordered_map<string, string> RegisterRenaming::getRenameTable() const {
+    return renameTable;
+}
+
+void RegisterRenaming::reset() {
+    renameTable.clear();
+    nextPhysical = 0;
 }
