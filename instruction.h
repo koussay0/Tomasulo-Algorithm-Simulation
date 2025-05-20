@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include "ReservationStation.h"
 
 struct InstructionTiming {
     int issue = -1;
@@ -23,11 +24,17 @@ struct Instruction {
 
 class TomasuloSimulator {
 public:
+    int PC;
+    int cycle = 0;
+    vector<int16_t> registerFile = vector<int16_t>(8, 0);
+    vector<ReservationStation*> registerStatus;
+    vector<ReservationStation> reservationStations;
     TomasuloSimulator(const std::string& filename);
     void simulate();
     void printResults() const;
+    void issue();
 
-private:
+
     std::vector<Instruction> instructions;
     int totalCycles = 0;
     int completedInstructions = 0;

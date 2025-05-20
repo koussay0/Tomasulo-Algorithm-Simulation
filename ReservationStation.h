@@ -22,6 +22,7 @@ public:
     string Qj;
     string Qk;
     int16_t A;
+    int instructionIndex;
     FunctionalUnit* functionalUnit;
 
     ReservationStation(const string& name);

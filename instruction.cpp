@@ -7,6 +7,8 @@
 
 TomasuloSimulator::TomasuloSimulator(const std::string& filename) {
     instructions = readInstructions(filename);
+    PC = 0;
+    registerStatus.resize(8, nullptr);
 }
 
 std::vector<Instruction> TomasuloSimulator::readInstructions(const std::string& filename) {
@@ -100,3 +102,130 @@ void TomasuloSimulator::printResults() const {
               << (branchCount > 0 ? (100.0f * mispredictedBranches / branchCount) : 0.0f)
               << "%\n";
 }
+
+
+void TomasuloSimulator :: issue(){
+    if (PC >= instructions.size()) return; // No more instructions
+
+    Instruction& instr = instructions[PC]; //read the instruction
+
+    // 1. Check for structural hazards - find an available reservation station
+    ReservationStation* rs = nullptr;
+    for (auto& station :  reservationStations) {
+        if ((station.Name.find(instr.op) != string::npos) && !station.isBusy()) {
+            rs = &station;
+            break;
+        }
+    }
+
+    // If no reservation station is available, cannot issue (structural hazard)
+    if (rs == nullptr) {
+        return;
+    }
+
+    instr.timing.issue = cycle;
+    rs->Busy = true;
+    rs->Op = instr.op;
+    rs->instructionIndex = PC;
+    rs->Qj = rs->Qk = nullptr;
+
+    if (instr.op == "LOAD") {
+        std::string baseReg = instr.args[1];
+        baseReg = baseReg.substr(baseReg.find('(') + 1);
+        baseReg = baseReg.substr(0, baseReg.find(')'));
+        std::string destReg = instr.args[0];
+
+        if (registerStatus[stoi(baseReg)]) {
+            rs->Qj = registerStatus[stoi(baseReg)]->Name;
+        } else {
+            rs->Vj = registerFile[stoi(baseReg)];
+        }
+
+        registerStatus[stoi(destReg)] = rs;
+
+    } else if (instr.op == "STORE") {
+        std::string srcReg = instr.args[0];
+        std::string baseReg = instr.args[1];
+        baseReg = baseReg.substr(baseReg.find('(') + 1);
+        baseReg = baseReg.substr(0, baseReg.find(')'));
+
+        if (registerStatus[stoi(srcReg)]) {
+            rs->Qj = registerStatus[stoi(srcReg)]->Name;
+        } else {
+            rs->Vj = registerFile[stoi(srcReg)];
+        }
+
+        if (registerStatus[stoi(baseReg)]) {
+            rs->Qk = registerStatus[stoi(baseReg)]->Name;
+        } else {
+            rs->Vk = registerFile[stoi(baseReg)];
+        }
+
+    } else if (instr.op == "BEQ") {
+        std::string rs1 = instr.args[0];
+        std::string rs2 = instr.args[1];
+
+        if (registerStatus[stoi(rs1)]) {
+            rs->Qj = registerStatus[stoi(rs1)]->Name;
+        } else {
+            rs->Vj = registerFile[stoi(rs1)];
+        }
+
+        if (registerStatus[stoi(rs2)]) {
+            rs->Qk = registerStatus[stoi(rs2)]->Name;
+        } else {
+            rs->Vk = registerFile[stoi(rs2)];
+        }
+
+    } else if (instr.op == "CALL") {
+        // For CALL: no register dependencies, just mark RS busy with CALL op
+        rs->Busy = true;
+        rs->Op = "CALL";
+        rs->Qj = nullptr;
+        rs->Qk = nullptr;
+        rs->Vj = 0;
+        rs->Vk = 0;
+        // You may want to track the return address register here if applicable
+        // But your code comments say no dependencies assumed for now
+    }
+    else if (instr.op == "RET") {
+        // For RET: assume it reads return address from a register (args[0])
+        std::string retReg = instr.args[0];
+
+        if (registerStatus[stoi(retReg)]) {
+            rs->Qj = registerStatus[stoi(retReg)]->Name;
+        } else {
+            rs->Vj = registerFile[stoi(retReg)];
+        }
+
+        rs->Qk = nullptr;
+        rs->Vk = 0;
+        rs->Busy = true;
+        rs->Op = "RET";
+    }
+
+   else {
+        // ALU operations: ADD, SUB, MUL, NOR, etc.
+        std::string destReg = instr.args[0];
+        std::string src1 = instr.args[1];
+        std::string src2 = instr.args[2];
+
+        if (registerStatus[stoi(src1)]) {
+            rs->Qj = registerStatus[stoi(src1)]->Name;
+        } else {
+            rs->Vj = registerFile[stoi(src1)];
+        }
+
+        if (registerStatus[stoi(src2)]) {
+            rs->Qk = registerStatus[stoi(src2)]->Name;
+        } else {
+            rs->Vk = registerFile[stoi(src2)];
+        }
+
+        registerStatus[stoi(destReg)] = rs;
+    }
+
+    PC++; // Advance program counter after successful issue
+}
+
+

@@ -1,18 +1,3 @@
-#include "instruction.h"
-#include<iostream>
-
-//Older main
-// int main() {
-//     std::string fullPath = "C:/Users/kouss/CLionProjects/untitled/instructions.txt";
-//     TomasuloSimulator simulator(fullPath);
-
-//     simulator.simulate();
-//     simulator.printResults();
-
-//     return 0;
-// }
-
-
 #include <iostream>
 #include <unordered_map>
 #include "Memory.h"
