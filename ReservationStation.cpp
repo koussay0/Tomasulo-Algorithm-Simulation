@@ -16,6 +16,7 @@ ReservationStation ::ReservationStation(const std::string &name) {
     Qj = "";
     Qk = "";
     A = 0;
+    destinationReg = -1;
 }
 
 bool ReservationStation ::isBusy() {
