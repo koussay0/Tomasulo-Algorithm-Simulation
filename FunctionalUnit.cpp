@@ -1,13 +1,8 @@
 #include <iostream>
-#include <string> // for std::memcpy
+#include <string>
 #include <cstdint>
-using namespace std;
 #include "FunctionalUnit.h"
-#include "Memory.h" // Assuming there's a Memory class
-
-
-
-//Koussay's memory does not have a constructor!!
+#include "Memory.h" // Make sure this matches your filename
 
 FunctionalUnit::FunctionalUnit(std::string Opcode, int Cycles, int pc, int label, int16_t I1, int16_t I2, int16_t Offset) {
     opcode = Opcode;
@@ -18,8 +13,7 @@ FunctionalUnit::FunctionalUnit(std::string Opcode, int Cycles, int pc, int label
     i2 = I2;
     offset = Offset;
     result = 0;
-    memory = nullptr;
-    //result = Result;
+    memory = nullptr; // pointer to memory must be set externally
 }
 
 int16_t FunctionalUnit::Operation() {
@@ -33,7 +27,7 @@ int16_t FunctionalUnit::Operation() {
         result = ~(i1 | i2);
     }
     else if (opcode == "MUL") {
-        result = (i1 * i2) & 0xFFFF;
+        result = (i1 * i2) & 0xFFFF; // 16-bit result
     }
     else if (opcode == "CALL") {
         result = PC + 1;
@@ -44,34 +38,30 @@ int16_t FunctionalUnit::Operation() {
         result = PC;
     }
     else if (opcode == "LOAD") {
-        // result = offset + i2; old version
-        int16_t effectiveAddr = offset + i2;
-        // Access memory if available
+        int16_t effectiveAddr = i2 + offset;
         if (memory != nullptr) {
             result = memory->read(effectiveAddr);
         } else {
-            result = effectiveAddr; // Just return address if no memory access
+            std::cerr << "Memory not set for LOAD operation\n";
+            result = 0;
         }
     }
     else if (opcode == "STORE") {
-        // result = offset + i2; old version
-        int16_t effectiveAddr = offset + i2;
+        int16_t effectiveAddr = i2 + offset;
         if (memory != nullptr) {
             memory->write(effectiveAddr, i1);
+        } else {
+            std::cerr << "Memory not set for STORE operation\n";
         }
         result = effectiveAddr;
     }
-
-
-
     else if (opcode == "BEQ") {
         if (i1 == i2) {
-            PC = PC+1+offset;
-            result = PC;
+            PC = PC + 1 + offset;
         } else {
-            PC = PC+1;
-            result = PC;
+            PC = PC + 1;
         }
+        result = PC;
     }
     else {
         result = 0;
@@ -79,11 +69,11 @@ int16_t FunctionalUnit::Operation() {
     return result;
 }
 
-int FunctionalUnit ::getRemCycles() {
+int FunctionalUnit::getRemCycles() {
     return remCycles;
 }
 
-void FunctionalUnit ::clear() {
+void FunctionalUnit::clear() {
     opcode = "";
     i1 = 0;
     i2 = 0;
@@ -91,5 +81,3 @@ void FunctionalUnit ::clear() {
     result = 0;
     remCycles = 0;
 }
-
-
