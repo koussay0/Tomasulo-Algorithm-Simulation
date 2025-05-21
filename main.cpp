@@ -2,7 +2,6 @@
 #include <unordered_map>
 #include "Memory.h"
 #include "TomasuloSimulator.h"
-//#include "TS.h"
 using namespace std;
 
 //Purpose of main is to:
@@ -39,12 +38,12 @@ int main() {
     //Parsing the instruction
     string testcase1 = "C:/Users/ismai/OneDrive/Desktop/testcase1.txt";
     TomasuloSimulator ts (testcase1);
-    //TS ts(testcase1);
+
 
     //Starting the simulation
 
-    //ts.simulate(); //update simulate function parameters to allow for passing numOfStations and instructionLatency
-    //ts.printResults();
+    ts.simulate(); //update simulate function parameters to allow for passing numOfStations and instructionLatency
+    ts.printResults();
 
     return 0;
 
