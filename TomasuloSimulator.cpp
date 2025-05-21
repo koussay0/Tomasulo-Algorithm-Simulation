@@ -53,40 +53,30 @@ int TomasuloSimulator::getExecutionCycles(const std::string& op) const {
     return 1;
 }
 
-//void TomasuloSimulator::simulate() {
-//    int cycle = 0;
-//
-//    for (auto& instr : instructions) {
-//        instr.timing.issue = cycle++;
-//        instr.timing.startExec = cycle;
-//        instr.timing.endExec = cycle + getExecutionCycles(instr.op) - 1;
-//        instr.timing.writeBack = instr.timing.endExec + 1;
-//        cycle = instr.timing.writeBack + 1;
-//
-//        if (instr.isBranch) {
-//            branchCount++;
-//            instr.branchPredictedTaken = false;  // dummy prediction
-//            instr.branchTaken = true;            // dummy actual behavior
-//            if (instr.branchPredictedTaken != instr.branchTaken) {
-//                mispredictedBranches++;
-//            }
-//        }
-//
-//        completedInstructions++;
-//    }
-//
-//    totalCycles = cycle;
-//}
-
 void TomasuloSimulator::simulate() {
     cycle = 0;
     completedInstructions = 0;
+    branchCount = 0;
+    mispredictedBranches = 0;
 
     while (completedInstructions < (int)instructions.size()) {
-        // Write stage: broadcast results and update registers
         Issue();
         Execute();
         Write();
+
+        // Handle branch instructions
+        for (auto& instr : instructions) {
+            if (instr.isBranch && instr.timing.writeBack == cycle) {
+                branchCount++;
+                instr.branchPredictedTaken = false;  // Simple static prediction: predict not taken
+                instr.branchTaken = true;            // Actual outcome determined in Write stage
+                if (instr.branchPredictedTaken != instr.branchTaken) {
+                    mispredictedBranches++;
+                }
+            }
+        }
+
+        // Update completion status
         for (auto& instr : instructions) {
             if (instr.timing.writeBack == cycle) {
                 completedInstructions++;
@@ -126,14 +116,14 @@ void TomasuloSimulator::printResults() const {
 }
 
 
-void TomasuloSimulator ::Issue() {
+void TomasuloSimulator::Issue() {
     if (PC >= instructions.size()) return; // No more instructions
 
     Instruction& instr = instructions[PC]; //read the instruction
 
     // 1. Check for structural hazards - find an available reservation station
     ReservationStation* rs = nullptr;
-    for (auto& station :  reservationStations) {
+    for (auto& station : reservationStations) {
         if ((station.Name.find(instr.op) != string::npos) && !station.isBusy()) {
             rs = &station;
             break;
@@ -149,7 +139,9 @@ void TomasuloSimulator ::Issue() {
     rs->Busy = true;
     rs->Op = instr.op;
     rs->instructionIndex = PC;
-    rs->Qj = rs->Qk = nullptr;
+    rs->destinationReg = -1;  // Initialize this
+    rs->Qj = nullptr;  // Initialize these separately
+    rs->Qk = nullptr;
 
     if (instr.op == "LOAD") {
         std::string baseReg = instr.args[1];
@@ -157,12 +149,14 @@ void TomasuloSimulator ::Issue() {
         baseReg = baseReg.substr(0, baseReg.find(')'));
         std::string destReg = instr.args[0];
 
+        // Only set Qj if there's a dependency
         if (registerStatus[stoi(baseReg)]) {
             rs->Qj = registerStatus[stoi(baseReg)]->Name;
         } else {
             rs->Vj = registerFile[stoi(baseReg)];
         }
 
+        rs->destinationReg = stoi(destReg);
         registerStatus[stoi(destReg)] = rs;
 
     } else if (instr.op == "STORE") {
@@ -183,9 +177,12 @@ void TomasuloSimulator ::Issue() {
             rs->Vk = registerFile[stoi(baseReg)];
         }
 
+        rs->destinationReg = -1;  // Store has no destination register
+
     } else if (instr.op == "BEQ") {
         std::string rs1 = instr.args[0];
         std::string rs2 = instr.args[1];
+        std::string target = instr.args[2];  // Branch target
 
         if (registerStatus[stoi(rs1)]) {
             rs->Qj = registerStatus[stoi(rs1)]->Name;
@@ -199,19 +196,22 @@ void TomasuloSimulator ::Issue() {
             rs->Vk = registerFile[stoi(rs2)];
         }
 
+        rs->A = stoi(target);  // Store branch target
+        rs->destinationReg = -1;  // Branch has no destination register
+
     } else if (instr.op == "CALL") {
-        // For CALL: no register dependencies, just mark RS busy with CALL op
+        // For CALL: save return address
         rs->Busy = true;
         rs->Op = "CALL";
         rs->Qj = nullptr;
         rs->Qk = nullptr;
         rs->Vj = 0;
         rs->Vk = 0;
-        // You may want to track the return address register here if applicable
-        // But your code comments say no dependencies assumed for now
-    }
-    else if (instr.op == "RET") {
-        // For RET: assume it reads return address from a register (args[0])
+        rs->A = PC + 1;  // Save return address
+        rs->destinationReg = 7;  // Assuming R7 is return address register
+        registerStatus[7] = rs;  // Update status for return address register
+
+    } else if (instr.op == "RET") {
         std::string retReg = instr.args[0];
 
         if (registerStatus[stoi(retReg)]) {
@@ -224,9 +224,9 @@ void TomasuloSimulator ::Issue() {
         rs->Vk = 0;
         rs->Busy = true;
         rs->Op = "RET";
-    }
+        rs->destinationReg = -1;  // RET has no destination register
 
-   else {
+    } else {
         // ALU operations: ADD, SUB, MUL, NOR, etc.
         std::string destReg = instr.args[0];
         std::string src1 = instr.args[1];
@@ -244,130 +244,142 @@ void TomasuloSimulator ::Issue() {
             rs->Vk = registerFile[stoi(src2)];
         }
 
+        rs->destinationReg = stoi(destReg);
         registerStatus[stoi(destReg)] = rs;
     }
+
     rs->Issue_status = true;
     PC++; // Advance program counter after successful issue
 }
 
-void TomasuloSimulator :: Execute(){
-    for (auto& rs : reservationStations) {
-        if (!rs.Busy)
-            continue; // Skip free stations
+void TomasuloSimulator::Execute() {
+    // First handle CDB broadcasts to update waiting reservation stations
+    if (commonDataBus.busy) {
+        int cdbReg = commonDataBus.destinationReg;
+        int16_t cdbValue = commonDataBus.value;
 
-        // Check if operands ready: Qj and Qk should be nullptr or empty string
-        bool operandsReady = rs.Qj.empty() && rs.Qk.empty();
+        for (auto& rs : reservationStations) {
+            if (!rs.Busy || rs.Execute_status) continue;
 
-        if (operandsReady) {
-            // If execution hasn't started yet
-            if (rs.functionalUnit == nullptr) {
-                // Find a matching free functional unit
-                for (auto &fu: fuList) {
-                    if (!fu.isBusy() && fu.opcode == rs.Op) {
-                        // Configure the functional unit
-                        fu.opcode = rs.Op;
-                        fu.i1 = rs.Vj;
-                        fu.i2 = rs.Vk;
-                        fu.offset = rs.A;
-                        fu.PC = PC;  // Use current PC or rs.instructionIndex if preferred
-                        fu.remCycles = getExecutionCycles(rs.Op);  // Set initial cycle count
-                        fu.setBusy(true);
-
-                        rs.functionalUnit = &fu;
-                        instructions[rs.instructionIndex].timing.startExec = cycle;
-                        break;
+            // Find the reservation station that produced this result
+            for (auto& producerRS : reservationStations) {
+                if (producerRS.Busy && producerRS.destinationReg == cdbReg) {
+                    // If this RS is waiting on the producer's result
+                    if (rs.Qj == producerRS.Name) {
+                        rs.Vj = cdbValue;
+                        rs.Qj.clear();
                     }
-                }
-            }
-
-            // If functional unit is assigned and still executing
-            if (rs.functionalUnit != nullptr) {
-                if (rs.functionalUnit->remCycles > 0) {
-                    rs.functionalUnit->remCycles--;
-                }
-
-                // Execution complete
-                if (rs.functionalUnit->remCycles == 0) {
-                    instructions[rs.instructionIndex].timing.endExec = cycle;
-
-                    int16_t result = rs.functionalUnit->Operation();  // Execute and get result
-                    //commonDataBus.broadcast(rs.Name, result);         // Send to CDB
-                    commonDataBus.broadcast(result, rs.destinationReg);
-
-
-                    rs.Write_status = true;  // Mark as ready for write-back
-
-                    // Free the functional unit for future reuse
-                    rs.functionalUnit->clear();
-                    rs.functionalUnit = nullptr;
-                }
-            }
-        } else {
-            // Operands not ready: try to get data from CDB if it's broadcasting
-            if (commonDataBus.busy) {
-                int cdbReg = commonDataBus.destinationReg;  // destination register from CDB
-                int16_t cdbValue = commonDataBus.value;
-
-                // Find the reservation station producing this register value
-                for (auto &producerRS: reservationStations) {
-                    if (producerRS.Busy && producerRS.destinationReg == cdbReg) {
-                        // If this RS is the one that rs.Qj depends on, update Vj
-                        if (rs.Qj == producerRS.Name) {
-                            rs.Vj = cdbValue;
-                            rs.Qj.clear();
-                        }
-                        // If this RS is the one that rs.Qk depends on, update Vk
-                        if (rs.Qk == producerRS.Name) {
-                            rs.Vk = cdbValue;
-                            rs.Qk.clear();
-                        }
-                        break; // stop searching once matched
+                    if (rs.Qk == producerRS.Name) {
+                        rs.Vk = cdbValue;
+                        rs.Qk.clear();
                     }
+                    break;
                 }
             }
-            rs.Execute_status = true;
         }
     }
-}
 
-void TomasuloSimulator ::Write() {
+    // Process each reservation station
     for (auto& rs : reservationStations) {
-        if (rs.Write_status) {  // RS ready to write back
+        if (!rs.Busy || !rs.Issue_status || rs.Execute_status)
+            continue;
 
-            // Broadcast result to CDB
-            int16_t result = rs.functionalUnit->Operation();  // Or stored result
-            commonDataBus.broadcast(result, rs.destinationReg);
+        // Check if operands are ready
+        bool operandsReady = rs.Qj.empty() && rs.Qk.empty();
+        if (!operandsReady) continue;
 
-            // Update register file if this RS owns the register
-            int destReg = rs.destinationReg;
-            if (!rs.Qj.empty() || !rs.Qk.empty()) {
-                // Normally you'd wait until operands ready before write,
-                // but since Write_status is set, assume ready.
-            }
-            if (destReg >= 0 && destReg < (int)registerFile.size()) {
-                registerFile[destReg] = result;
-                registerStatus[destReg] = nullptr;  // Clear RS holding this register
-            }
+        // Start execution if not already started
+        if (rs.functionalUnit == nullptr) {
+            // Find a matching free functional unit
+            for (auto& fu : fuList) {
+                if (!fu.isBusy() && fu.opcode == rs.Op) {
+                    // Configure the functional unit
+                    fu.opcode = rs.Op;
+                    fu.i1 = rs.Vj;
+                    fu.i2 = rs.Vk;
+                    fu.offset = rs.A;
+                    fu.PC = rs.instructionIndex;  // Use instruction index instead of PC
+                    fu.remCycles = getExecutionCycles(rs.Op);
+                    fu.setBusy(true);
 
-            // Update other RSs waiting for this result
-            for (auto& otherRS : reservationStations) {
-                if (otherRS.Qj == rs.Name) {
-                    otherRS.Vj = result;
-                    otherRS.Qj.clear();
-                }
-                if (otherRS.Qk == rs.Name) {
-                    otherRS.Vk = result;
-                    otherRS.Qk.clear();
+                    rs.functionalUnit = &fu;
+                    instructions[rs.instructionIndex].timing.startExec = cycle;
+                    break;
                 }
             }
+        }
 
-            // Clear the reservation station and free FU
-            rs.clear();
-            if (rs.functionalUnit) {
+        // Continue execution if functional unit is assigned
+        if (rs.functionalUnit != nullptr) {
+            if (rs.functionalUnit->remCycles > 0) {
+                rs.functionalUnit->remCycles--;
+            }
+
+            // Check if execution is complete
+            if (rs.functionalUnit->remCycles == 0) {
+                instructions[rs.instructionIndex].timing.endExec = cycle;
+                rs.result = rs.functionalUnit->Operation();  // Store result
+                rs.Execute_status = true;
+
+                // Free the functional unit
                 rs.functionalUnit->clear();
                 rs.functionalUnit = nullptr;
             }
         }
+    }
+}
+
+
+void TomasuloSimulator::Write() {
+    for (auto& rs : reservationStations) {
+        if (!rs.Busy || !rs.Execute_status || rs.Write_status)
+            continue;
+
+        // Update instruction timing
+        instructions[rs.instructionIndex].timing.writeBack = cycle;
+
+        // Broadcast result to CDB (without sourceName since your implementation doesn't have it)
+        commonDataBus.broadcast(rs.result, rs.destinationReg);
+
+        // Update register file if this instruction has a destination register
+        if (rs.destinationReg >= 0 && rs.destinationReg < (int)registerFile.size()) {
+            registerFile[rs.destinationReg] = rs.result;
+            // Only clear register status if this RS still owns it
+            if (registerStatus[rs.destinationReg] == &rs) {
+                registerStatus[rs.destinationReg] = nullptr;
+            }
+        }
+
+        // Update any dependent reservation stations
+        for (auto& otherRS : reservationStations) {
+            if (!otherRS.Busy) continue;
+
+            if (otherRS.Qj == rs.Name) {
+                otherRS.Vj = rs.result;
+                otherRS.Qj.clear();
+            }
+            if (otherRS.Qk == rs.Name) {
+                otherRS.Vk = rs.result;
+                otherRS.Qk.clear();
+            }
+        }
+
+        // Handle special instructions
+        if (rs.Op == "BEQ") {
+            // Check branch condition and update PC if taken
+            if (rs.Vj == rs.Vk) {  // Branch taken
+                PC = rs.A;
+                branchCount++;
+                // Update branch prediction stats if needed
+            }
+        } else if (rs.Op == "CALL") {
+            PC = rs.Vj;  // Jump to target address
+        } else if (rs.Op == "RET") {
+            PC = rs.Vj;  // Return to saved address
+        }
+
+        // Clear the reservation station
+        rs.clear();
         rs.Write_status = true;
     }
 
@@ -375,49 +387,4 @@ void TomasuloSimulator ::Write() {
     commonDataBus.busy = false;
 }
 
-//void TomasuloSimulator::Write() {
-//    for (auto& rs : reservationStations) {
-//        if (rs.Write_status) {  // RS ready to write back
-//            // Get the result - this should be stored in RS already from Execute stage
-//            int16_t result = rs.result;  // Assuming result was stored in the RS
-//
-//            // Broadcast result to CDB
-//            commonDataBus.broadcast(result, rs.destinationReg);
-//
-//            // Update register file
-//            int destReg = rs.destinationReg;
-//            if (destReg >= 0 && destReg < (int)registerFile.size()) {
-//                registerFile[destReg] = result;
-//
-//                // Only clear status if this RS still owns the register
-//                if (registerStatus[destReg] == &rs) {
-//                    registerStatus[destReg] = nullptr;
-//                }
-//            }
-//
-//            // Update instruction timing
-//            instructions[rs.instructionIndex].timing.writeResult = cycle;
-//
-//            // Update other RSs waiting for this result
-//            for (auto& otherRS : reservationStations) {
-//                if (otherRS.Qj == rs.Name) {
-//                    otherRS.Vj = result;
-//                    otherRS.Qj.clear();
-//                }
-//                if (otherRS.Qk == rs.Name) {
-//                    otherRS.Vk = result;
-//                    otherRS.Qk.clear();
-//                }
-//            }
-//
-//            // Clear the reservation station
-//            rs.clear();
-//            rs.Write_status = false;
-//            rs.Busy = false;
-//        }
-//    }
-//
-//    // Clear CDB after broadcast cycle
-//    commonDataBus.busy = false;
-//}
 

@@ -1,31 +1,49 @@
-// TomasuloSimulator.hpp
-#ifndef TOMASULO_SIMULATOR_H
-#define TOMASULO_SIMULATOR_H
+// TomasuloSimulator.h
+#ifndef C_TOMASULOSIMULATOR_H
+#define C_TOMASULOSIMULATOR_H
 
 #include <string>
 #include <vector>
 #include "ReservationStation.h"
 #include "CommonDataBus.h"
 #include "FunctionalUnit.h"
+#include "Instruction.h"
+using namespace std;
 
-struct InstructionTiming {
-    int issue = -1;
-    int startExec = -1;
-    int endExec = -1;
-    int writeBack = -1;
-};
+//struct InstructionTiming {
+//    int issue = -1;
+//    int startExec = -1;
+//    int endExec = -1;
+//    int writeBack = -1;
+//};
 
-struct Instruction {
-    std::string op;
-    std::vector<std::string> args;
-    InstructionTiming timing;
-    bool isBranch = false;
-    bool branchTaken = false;
-    bool branchPredictedTaken = false;
-};
+//struct Instruction {
+//    std::string op;
+//    std::vector<std::string> args;
+//    InstructionTiming timing;
+//    bool isBranch = false;
+//    bool branchTaken = false;
+//    bool branchPredictedTaken = false;
+//};
 
 class TomasuloSimulator {
 public:
+//    struct InstructionTiming {
+//        int issue = -1;
+//        int startExec = -1;
+//        int endExec = -1;
+//        int writeBack = -1;
+//    };
+//
+//    struct Instruction {
+//        std::string op;
+//        std::vector<std::string> args;
+//        InstructionTiming timing;
+//        bool isBranch = false;
+//        bool branchTaken = false;
+//        bool branchPredictedTaken = false;
+//    };
+
     int PC;
     int cycle = 0;
     vector<int16_t> registerFile = vector<int16_t>(8, 0);
@@ -51,4 +69,4 @@ public:
     int getExecutionCycles(const std::string& op) const;
 };
 
-#endif // TOMASULO_SIMULATOR_HPP
+#endif // C_TOMASULOSIMULATOR_H
