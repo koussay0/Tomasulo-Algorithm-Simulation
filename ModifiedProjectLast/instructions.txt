@@ -1,0 +1,9 @@
+# Sample Tomasulo instructions
+# Format: OPCODE DEST SRC1 SRC2/OFFSET/LABEL
+LOAD R1 5(R0)
+ADD R2 R1 R1
+MUL R3 R2 R1
+STORE R3 6(R0)
+BEQ R1 R2 2
+CALL 4
+RET
