@@ -19,17 +19,17 @@ TomasuloSimulator::TomasuloSimulator(const std::string& instrFile, const std::st
     reservationStations.push_back({"MUL0", "", 0});
 }
 
-std::vector<Instruction> TomasuloSimulator::readInstructions(const std::string& filename) {
-    std::vector<Instruction> instrs;
-    std::ifstream file(filename);
-    std::string line;
+vector<Instruction> TomasuloSimulator::readInstructions(const std::string& filename) {
+    vector<Instruction> instrs;
+    ifstream file(filename);
+    string line;
     int addr = 0;
     while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        std::string op;
-        std::vector<std::string> args;
+        istringstream iss(line);
+        string op;
+        vector<std::string> args;
         iss >> op;
-        std::string arg;
+        string arg;
         while (iss >> arg) args.push_back(arg);
         instrs.push_back(Instruction(op, args, addr++));
     }
@@ -127,16 +127,16 @@ void TomasuloSimulator::Write() {
 }
 
 void TomasuloSimulator::printResults() const {
-    std::cout << "Instr | Issue | Start | End | WB\n";
-    std::cout << "-------------------------------\n";
+    cout << "Instr | Issue | Start | End | WB\n";
+    cout << "-------------------------------\n";
     for (const auto& instr : instructions) {
-        std::cout << std::setw(5) << instr.op << " | "
+        cout << std::setw(5) << instr.op << " | "
                   << std::setw(5) << instr.timing.issue << " | "
                   << std::setw(5) << instr.timing.startExec << " | "
                   << std::setw(3) << instr.timing.endExec << " | "
                   << std::setw(3) << instr.timing.writeBack << "\n";
     }
-    std::cout << "Total Cycles: " << totalCycles << std::endl;
-    std::cout << "IPC: " << (double)instructions.size() / (totalCycles ? totalCycles : 1) << std::endl;
-    std::cout << "Branch Misprediction Rate: " << (branchCount ? (100.0 * mispredictedBranches / branchCount) : 0) << "%\n";
+    cout << "Total Cycles: " << totalCycles << endl;
+    cout << "IPC: " << (double)instructions.size() / (totalCycles ? totalCycles : 1) << std::endl;
+    cout << "Branch Misprediction Rate: " << (branchCount ? (100.0 * mispredictedBranches / branchCount) : 0) << "%\n";
 }
